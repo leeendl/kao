@@ -33,7 +33,6 @@ void kill_kao(int signal)
 int main()
 {
     std::signal(SIGINT, kill_kao);
-    
 
     dpp::cluster cluster("", dpp::i_all_intents, 2);
 
@@ -63,7 +62,7 @@ int main()
         }
     });
 
-    cluster.on_guild_create([&](const dpp::guild_create_t &event)
+    cluster.on_guild_create([](const dpp::guild_create_t &event)
     {   
         ::guild guild{.id = event.created.id};
 
@@ -83,6 +82,15 @@ int main()
         };
         
         guilds.emplace(event.created.id, guild);
+    });
+
+    cluster.on_guild_member_add([&cluster](const dpp::guild_member_add_t &event) -> dpp::task<void> 
+    {
+        ::guild &guild = guilds[event.adding_guild.id];
+        if (guild.autorole_id != 0) 
+            co_await cluster.co_guild_member_add_role(guild.id, event.added.user_id, guild.autorole_id);
+
+        co_return;
     });
 
     cluster.on_slashcommand([&cluster](const dpp::slashcommand_t &event) -> dpp::task<void> 
